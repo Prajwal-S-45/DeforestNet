@@ -14,7 +14,7 @@ function getApiToken() {
 }
 
 function setApiToken(token) {
-    const trimmedToken = (token || '').trim();
+    const trimmedToken = (token || '').trim().replace(/^Bearer\s+/i, '');
     if (trimmedToken) {
         localStorage.setItem(API_TOKEN_KEY, trimmedToken);
     } else {
@@ -645,6 +645,11 @@ async function runPrediction() {
     btn.textContent = 'Running...';
 
     try {
+        if (!getApiToken()) {
+            toast('Save a JWT token first, then retry the prediction.', 'warning', 5000);
+            return;
+        }
+
         const payload = {
             cause: document.getElementById('predCause').value,
             latitude: parseFloat(document.getElementById('predLat').value),
@@ -732,6 +737,11 @@ async function runPrediction() {
 
 async function generateDemoPrediction() {
     try {
+        if (!getApiToken()) {
+            toast('Save a JWT token first, then retry the demo prediction.', 'warning', 5000);
+            return;
+        }
+
         const response = await fetch(`${API_BASE}/predictions/demo`, {
             method: 'POST',
             headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
