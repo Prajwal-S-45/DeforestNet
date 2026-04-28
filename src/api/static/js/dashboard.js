@@ -38,8 +38,43 @@ function syncApiTokenUi() {
     }
 
     if (tokenStatus) {
-        tokenStatus.textContent = token ? 'JWT token saved for dashboard requests.' : 'No JWT token saved yet.';
+        tokenStatus.textContent = token
+            ? 'JWT token saved for dashboard requests.'
+            : 'No JWT token saved yet. Run Prediction will auto-login with demo credentials.';
     }
+}
+
+async function ensureApiToken() {
+    const existingToken = getApiToken();
+    if (existingToken) {
+        return existingToken;
+    }
+
+    toast('No JWT token saved. Using demo login to continue.', 'info', 4000);
+
+    const response = await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            user_id: 'officer1',
+            email: 'officer1@deforestnet.org',
+            password: 'demo',
+            role: 'officer'
+        })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Unable to obtain demo JWT token');
+    }
+
+    const data = await response.json();
+    if (!data.token) {
+        throw new Error('Demo JWT token not returned by the API');
+    }
+
+    setApiToken(data.token);
+    return data.token;
 }
 
 function getAuthHeaders(extraHeaders = {}) {
@@ -645,10 +680,7 @@ async function runPrediction() {
     btn.textContent = 'Running...';
 
     try {
-        if (!getApiToken()) {
-            toast('Save a JWT token first, then retry the prediction.', 'warning', 5000);
-            return;
-        }
+        await ensureApiToken();
 
         const payload = {
             cause: document.getElementById('predCause').value,
@@ -737,10 +769,7 @@ async function runPrediction() {
 
 async function generateDemoPrediction() {
     try {
-        if (!getApiToken()) {
-            toast('Save a JWT token first, then retry the demo prediction.', 'warning', 5000);
-            return;
-        }
+        await ensureApiToken();
 
         const response = await fetch(`${API_BASE}/predictions/demo`, {
             method: 'POST',
