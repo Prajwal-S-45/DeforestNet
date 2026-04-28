@@ -625,6 +625,19 @@ body {
   min-width: 150px;
 }
 
+.token-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+  margin-top: var(--spacing-sm);
+}
+
+.form-hint {
+  margin-top: var(--spacing-xs);
+  font-size: 12px;
+  color: var(--text-muted, #94a3b8);
+}
+
 .filter-group select:focus,
 .filter-group input[type="search"]:focus,
 .filter-group input[type="date"]:focus {

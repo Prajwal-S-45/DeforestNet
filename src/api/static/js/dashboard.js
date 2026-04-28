@@ -7,6 +7,60 @@ let mapMarkers = [];
 let alertSearchTimer = null;
 
 const API_BASE = '/api';
+const API_TOKEN_KEY = 'deforestnet_api_token';
+
+function getApiToken() {
+    return localStorage.getItem(API_TOKEN_KEY) || '';
+}
+
+function setApiToken(token) {
+    const trimmedToken = (token || '').trim();
+    if (trimmedToken) {
+        localStorage.setItem(API_TOKEN_KEY, trimmedToken);
+    } else {
+        localStorage.removeItem(API_TOKEN_KEY);
+    }
+    syncApiTokenUi();
+}
+
+function clearApiToken() {
+    localStorage.removeItem(API_TOKEN_KEY);
+    syncApiTokenUi();
+}
+
+function syncApiTokenUi() {
+    const tokenInput = document.getElementById('apiTokenInput');
+    const tokenStatus = document.getElementById('apiTokenStatus');
+    const token = getApiToken();
+
+    if (tokenInput && tokenInput.value !== token) {
+        tokenInput.value = token;
+    }
+
+    if (tokenStatus) {
+        tokenStatus.textContent = token ? 'JWT token saved for dashboard requests.' : 'No JWT token saved yet.';
+    }
+}
+
+function getAuthHeaders(extraHeaders = {}) {
+    const headers = { ...extraHeaders };
+    const token = getApiToken();
+
+    if (token) {
+        headers.Authorization = `Bearer ${token}`;
+    }
+
+    return headers;
+}
+
+function handleAuthFailure(response) {
+    if (response && response.status === 401) {
+        toast('Dashboard request rejected. Save a valid JWT token in the Predictions panel.', 'warning', 5000);
+        return true;
+    }
+
+    return false;
+}
 
 /* ==================== PAGE SWITCHING ==================== */
 function switchPage(page) {
@@ -601,9 +655,13 @@ async function runPrediction() {
 
         const response = await fetch(`${API_BASE}/predictions/demo`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify(payload)
         });
+
+        if (handleAuthFailure(response)) {
+            return;
+        }
 
         const result = await response.json();
 
@@ -676,9 +734,14 @@ async function generateDemoPrediction() {
     try {
         const response = await fetch(`${API_BASE}/predictions/demo`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify({})
         });
+
+        if (handleAuthFailure(response)) {
+            return;
+        }
+
         if (response.ok) {
             const result = await response.json();
             if (result.deforestation_detected) {
@@ -691,6 +754,14 @@ async function generateDemoPrediction() {
     } catch (error) {
         toast('Error creating demo prediction', 'error');
     }
+}
+
+function saveApiTokenFromInput() {
+    const tokenInput = document.getElementById('apiTokenInput');
+    if (!tokenInput) return;
+
+    setApiToken(tokenInput.value);
+    toast(getApiToken() ? 'JWT token saved for dashboard use.' : 'JWT token cleared.', getApiToken() ? 'success' : 'info');
 }
 
 /* ==================== MODAL ==================== */
@@ -767,6 +838,7 @@ function refreshData() {
 
 /* ==================== INITIALIZATION ==================== */
 document.addEventListener('DOMContentLoaded', () => {
+    syncApiTokenUi();
     updateSystemStatus();
     loadDashboardData();
     dataRefreshInterval = setInterval(updateSystemStatus, 30000);

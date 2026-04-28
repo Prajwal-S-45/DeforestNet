@@ -571,6 +571,26 @@
         <div class="prediction-panel">
           <div class="predict-form-card">
             <h3>Generate Prediction</h3>
+            <div class="form-group">
+              <label for="apiTokenInput">JWT Token for Dashboard Requests</label>
+              <input
+                type="password"
+                id="apiTokenInput"
+                placeholder="Paste a Bearer token here"
+                title="Save a JWT token for protected prediction endpoints"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <div class="form-hint" id="apiTokenStatus">No JWT token saved yet.</div>
+              <div class="token-actions">
+                <button type="button" class="btn btn-sm btn-primary" onclick="saveApiTokenFromInput()">
+                  Save Token
+                </button>
+                <button type="button" class="btn btn-sm btn-outline" onclick="clearApiToken()">
+                  Clear Token
+                </button>
+              </div>
+            </div>
             <div class="form-grid">
               <div class="form-group">
                 <label>Cause</label>
