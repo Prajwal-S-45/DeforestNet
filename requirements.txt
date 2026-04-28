@@ -23,6 +23,7 @@ matplotlib>=3.7.0
 # Web Framework (API + Dashboard)
 flask>=3.0.0
 flask-cors>=4.0.0
+PyJWT>=2.8.0
 
 # HTML Parsing (for verification)
 beautifulsoup4>=4.12.0

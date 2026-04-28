@@ -92,13 +92,27 @@ def create_app(testing: bool = False) -> Flask:
         return jsonify({
             "service": "DeforestNet API",
             "version": "1.0.0",
+            "authentication": {
+                "enabled": True,
+                "type": "JWT (Bearer token)",
+                "login": "/api/auth/login",
+                "validate": "/api/auth/validate",
+                "refresh": "/api/auth/refresh",
+                "docs": "POST /api/auth/login with {user_id, password, email?, role?}"
+            },
             "endpoints": {
                 "health": "/api/health",
+                "auth": "/api/auth",
                 "alerts": "/api/alerts",
                 "officers": "/api/officers",
                 "predictions": "/api/predictions",
                 "notifications": "/api/notifications",
                 "dashboard": "/api/dashboard"
+            },
+            "demo_credentials": {
+                "user_id": "officer1",
+                "password": "any_password",
+                "role": "officer"
             }
         })
 
@@ -133,12 +147,14 @@ def _init_services(app: Flask):
 
 def _register_blueprints(app: Flask):
     """Register route blueprints."""
+    from src.api.routes.auth import auth_bp
     from src.api.routes.alerts import alerts_bp
     from src.api.routes.officers import officers_bp
     from src.api.routes.predictions import predictions_bp
     from src.api.routes.notifications import notifications_bp
     from src.api.routes.dashboard import dashboard_bp
 
+    app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(alerts_bp, url_prefix="/api/alerts")
     app.register_blueprint(officers_bp, url_prefix="/api/officers")
     app.register_blueprint(predictions_bp, url_prefix="/api/predictions")

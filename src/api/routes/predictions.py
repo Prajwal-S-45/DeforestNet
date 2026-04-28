@@ -9,6 +9,7 @@ import numpy as np
 from pathlib import Path
 from flask import Blueprint, jsonify, request, current_app, send_file
 from src.utils.logger import get_logger
+from src.api.auth import token_required
 from configs.config import PREDICTIONS_DIR, VISUALIZATION_DIR
 
 logger = get_logger("api.predictions")
@@ -52,9 +53,12 @@ def _send_auto_notification(alert):
 
 
 @predictions_bp.route("/analyze", methods=["POST"])
+@token_required
 def analyze_prediction():
     """
     Analyze a prediction mask for deforestation.
+    
+    **Requires JWT authentication** (Bearer token in Authorization header)
 
     Accepts JSON with prediction and confidence arrays,
     or generates a demo prediction.
@@ -121,9 +125,12 @@ def analyze_prediction():
 
 
 @predictions_bp.route("/demo", methods=["POST"])
+@token_required
 def demo_prediction():
     """
     Generate a demo prediction and alert.
+    
+    **Requires JWT authentication** (Bearer token in Authorization header)
 
     Request JSON (all optional):
         cause: str - deforestation cause (Logging, Mining, Agriculture, Fire, Infrastructure)

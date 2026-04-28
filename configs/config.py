@@ -314,6 +314,16 @@ API_CONFIG = {
 }
 
 # ============================================================
+# JWT AUTHENTICATION CONFIGURATION
+# ============================================================
+JWT_CONFIG = {
+    "secret_key": os.environ.get("JWT_SECRET_KEY", "deforestnet-default-secret-key-change-in-production"),
+    "algorithm": "HS256",
+    "token_expiry_hours": int(os.environ.get("JWT_TOKEN_EXPIRY_HOURS", "24")),
+    "require_auth": bool(os.environ.get("JWT_REQUIRE_AUTH", "false").lower() == "true")
+}
+
+# ============================================================
 # DATABASE CONFIGURATION
 # ============================================================
 DATABASE_CONFIG = {
