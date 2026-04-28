@@ -14,15 +14,17 @@ def test_all():
     app = create_app(testing=True)
     client = app.test_client()
     results = {}
+    jwt_token = None  # Will store JWT token for authenticated requests
 
-    def test(name, method, url, json_data=None):
+    def test(name, method, url, json_data=None, headers=None):
         try:
+            request_headers = headers or {}
             if method == 'GET':
-                r = client.get(url)
+                r = client.get(url, headers=request_headers)
             elif method == 'POST':
-                r = client.post(url, json=json_data or {}, content_type='application/json')
+                r = client.post(url, json=json_data or {}, content_type='application/json', headers=request_headers)
             elif method == 'PUT':
-                r = client.put(url, json=json_data or {}, content_type='application/json')
+                r = client.put(url, json=json_data or {}, content_type='application/json', headers=request_headers)
 
             data = r.get_json(silent=True)
             status = "PASS" if r.status_code < 400 else f"FAIL({r.status_code})"
@@ -69,12 +71,32 @@ def test_all():
     test("alerts_active", "GET", "/api/alerts/active")
     test("alerts_pending", "GET", "/api/alerts/pending")
 
-    # Predictions (generates alerts)
-    print("\n--- Predictions ---")
+    # Authentication (JWT)
+    print("\n--- JWT Authentication ---")
+    auth_data, auth_code = test("auth_login", "POST", "/api/auth/login", {
+        "user_id": "officer1",
+        "email": "officer1@deforestnet.org",
+        "password": "demo",
+        "role": "officer"
+    })
+    if auth_data and auth_data.get("token"):
+        jwt_token = auth_data["token"]
+        print(f"         ✓ Token obtained (expires in {auth_data.get('expires_in_hours')} hours)")
+    else:
+        print(f"         ✗ Failed to obtain token")
+
+    auth_headers = {"Authorization": f"Bearer {jwt_token}"} if jwt_token else {}
+    test("auth_validate", "GET", "/api/auth/validate", headers=auth_headers)
+    test("auth_refresh", "POST", "/api/auth/refresh", headers=auth_headers)
+    if auth_data and auth_data.get("token"):
+        jwt_token = auth_data["token"]  # Update token if refresh succeeded
+
+    # Predictions (generates alerts) - NOW WITH JWT AUTH
+    print("\n--- Predictions (Protected with JWT) ---")
     data, code = test("pred_demo", "POST", "/api/predictions/demo", {
         "cause": "Mining", "latitude": 10.5, "longitude": 76.3,
         "region": "Western Ghats", "area_fraction": 0.3
-    })
+    }, headers=auth_headers)
     alert_id = None
     if data and data.get("alert"):
         alert_id = data["alert"]["alert_id"]
@@ -83,17 +105,17 @@ def test_all():
     data, code = test("pred_demo2", "POST", "/api/predictions/demo", {
         "cause": "Fire", "latitude": 22.1, "longitude": 80.5,
         "region": "Central India", "area_fraction": 0.5
-    })
+    }, headers=auth_headers)
     if data and data.get("alert"):
         print(f"         Generated alert: {data['alert']['alert_id']}")
 
     data, code = test("pred_demo3", "POST", "/api/predictions/demo", {
         "cause": "Logging", "latitude": 26.5, "longitude": 93.2,
         "region": "Northeast India", "area_fraction": 0.2
-    })
+    }, headers=auth_headers)
 
     test("pred_recent", "GET", "/api/predictions/recent")
-    test("pred_analyze", "POST", "/api/predictions/analyze", {"demo": True})
+    test("pred_analyze", "POST", "/api/predictions/analyze", {"demo": True}, headers=auth_headers)
 
     # Alerts after predictions
     print("\n--- Alerts (after predictions) ---")

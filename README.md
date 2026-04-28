@@ -201,21 +201,26 @@ DeforestNet/
 
 ## API Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/health` | System health check |
-| GET | `/api/alerts` | List all alerts (with filters) |
-| GET | `/api/alerts/<id>` | Get alert details |
-| GET | `/api/alerts/statistics` | Alert statistics and aggregations |
-| PUT | `/api/alerts/<id>/status` | Update alert status |
-| GET | `/api/officers` | List all officers |
-| POST | `/api/officers` | Create new officer |
-| POST | `/api/officers/setup-demo` | Create demo officers |
-| POST | `/api/predictions/demo` | Run demo prediction |
-| GET | `/api/notifications/status` | Notification system status |
-| POST | `/api/notifications/test` | Send test notification |
-| GET | `/api/dashboard` | Dashboard overview data |
-| GET | `/api/dashboard/stats` | Dashboard statistics |
+| Method | Endpoint | Authentication | Description |
+|--------|----------|-----------------|-------------|
+| GET | `/api/health` | None | System health check |
+| GET | `/api` | None | API root with endpoint list |
+| **POST** | **`/api/auth/login`** | None | **Obtain JWT token** |
+| **GET** | **`/api/auth/validate`** | JWT | **Validate current token** |
+| **POST** | **`/api/auth/refresh`** | JWT | **Refresh token (extend expiry)** |
+| GET | `/api/alerts` | None | List all alerts (with filters) |
+| GET | `/api/alerts/<id>` | None | Get alert details |
+| GET | `/api/alerts/statistics` | None | Alert statistics and aggregations |
+| PUT | `/api/alerts/<id>/status` | None | Update alert status |
+| GET | `/api/officers` | None | List all officers |
+| POST | `/api/officers` | None | Create new officer |
+| POST | `/api/officers/setup-demo` | None | Create demo officers |
+| **POST** | **`/api/predictions/demo`** | **JWT** | **Run demo prediction** |
+| **POST** | **`/api/predictions/analyze`** | **JWT** | **Analyze prediction mask** |
+| GET | `/api/notifications/status` | None | Notification system status |
+| POST | `/api/notifications/test` | None | Send test notification |
+| GET | `/api/dashboard` | None | Dashboard overview data |
+| GET | `/api/dashboard/stats` | None | Dashboard statistics |
 
 ## Notification System (100% Free)
 
@@ -226,6 +231,78 @@ DeforestNet/
 | Tier 3 | Gmail SMTP | Email notifications | Free Gmail App Password |
 
 All three tiers work in **demo mode** without credentials. Configure `.env` to enable live notifications.
+
+## API Authentication (JWT)
+
+The prediction endpoints (`/api/predictions/demo`, `/api/predictions/analyze`) are protected with **JWT Bearer token authentication**.
+
+### Getting Started
+
+```bash
+# 1. Login to get a JWT token
+curl -X POST "http://localhost:5000/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "officer1",
+    "password": "demo",
+    "email": "officer1@deforestnet.org",
+    "role": "officer"
+  }'
+
+# Response:
+# {
+#   "success": true,
+#   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+#   "expires_in_hours": 24,
+#   ...
+# }
+
+# 2. Use token for protected endpoints
+TOKEN="your_token_here"
+curl -X POST "http://localhost:5000/api/predictions/demo" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"cause": "Mining", "region": "Western Ghats"}'
+
+# 3. Validate or refresh token
+curl -X GET "http://localhost:5000/api/auth/validate" \
+  -H "Authorization: Bearer $TOKEN"
+
+curl -X POST "http://localhost:5000/api/auth/refresh" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Demo Users
+
+Built-in users for testing (all accept any password in demo mode):
+
+| User ID | Role | Email |
+|---------|------|-------|
+| `officer1` | officer | officer1@deforestnet.org |
+| `admin` | admin | admin@deforestnet.org |
+| `demo` | user | demo@deforestnet.org |
+
+### Configuration
+
+Set these environment variables in `.env`:
+
+```bash
+# JWT secret key (generate: python -c "import secrets; print(secrets.token_urlsafe(32))")
+JWT_SECRET_KEY=your_super_secret_key_change_this_in_production
+
+# Token expiration time in hours
+JWT_TOKEN_EXPIRY_HOURS=24
+
+# Enable authentication requirement (optional)
+JWT_REQUIRE_AUTH=false
+```
+
+### Test JWT Auth
+
+```bash
+python test_jwt_auth.py    # Comprehensive auth test suite
+python test_all_endpoints.py  # API tests including auth
+```
 
 ## Environment Variables
 
@@ -253,6 +330,7 @@ FIREBASE_ENABLED=false
 | ML Utilities | scikit-learn | BSD |
 | Visualization | Matplotlib, Chart.js | PSF / MIT |
 | Web Framework | Flask + Flask-CORS | BSD |
+| **Authentication** | **PyJWT** | **MIT** |
 | Database | SQLite3 (built-in) | Public Domain |
 | Maps | Leaflet.js | BSD |
 | Notifications | FCM, Telegram, Gmail | Free Tier |
